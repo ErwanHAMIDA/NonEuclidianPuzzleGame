@@ -290,14 +290,11 @@ void ACPP_Pawn::ThrowItem()
 	IsTakingItem = false;
 
 	UAddForceComponent* ForceComp = TakingItem->FindComponentByClass<UAddForceComponent>();
-	//UPrimitiveComponent* PrimComp = TakingItem->FindComponentByClass<UPrimitiveComponent>();
 
 
 	if (ForceComp)
 	{
 		ForceComp->ChangeGravity(MemTakingObjectGravityType);
-		//PrimComp->SetSimulatePhysics(true);
-
 	}
 
 	UGameplayStatics::PlaySound2D(this, ThrowCubeSound);
