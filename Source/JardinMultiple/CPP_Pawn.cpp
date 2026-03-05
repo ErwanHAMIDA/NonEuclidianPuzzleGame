@@ -89,6 +89,10 @@ void ACPP_Pawn::SetupComponent()
 	CapsuleCollider->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CapsuleCollider->SetCollisionObjectType(ECC_Pawn);
 	CapsuleCollider->SetCollisionResponseToAllChannels(ECR_Block);
+
+	RayCastIgnore = FCollisionQueryParams();
+	RayCastIgnore.AddIgnoredActor(this);
+
 }
 
 void ACPP_Pawn::RotatePlayer(FRotator Rotator)
@@ -169,6 +173,7 @@ void ACPP_Pawn::TurnCamera(const FInputActionValue& Value)
 		FQuat ActualRotation = RootRotation->GetComponentQuat();
 		float AngleRad = Input * CamSensitivityX;
 		FQuat DeltaQuat(-GravtityDir, AngleRad);
+
 		RootRotation->SetRelativeRotation(DeltaQuat * ActualRotation);
 	}
 	
@@ -195,21 +200,23 @@ void ACPP_Pawn::Ray()
 {
 	FVector start = GetActorLocation();
 	FVector forward = CameraComp->GetForwardVector();
-	start = FVector(start.X + (forward.X * 87), start.Y + (forward.Y * 87), start.Z + (forward.Z * 87));
 
-	FVector end = start + (forward * 50);
-	FHitResult hit;
+	FVector end = start + (forward * 300);
+	FHitResult* hit = new FHitResult();
+
+
 	
 	if (GetWorld())
-	{
-		bool actorHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, FCollisionQueryParams(),FCollisionResponseParams());
-		if (actorHit && hit.GetComponent())
+	{	
+		//ICI
+		bool actorHit = GetWorld()->LineTraceSingleByChannel(*hit, start, end, ECC_Pawn, RayCastIgnore,FCollisionResponseParams());
+		if (actorHit && hit->GetComponent())
 		{
-			if (hit.GetComponent()->ComponentHasTag("Wall") && IsTakingItem == false)
+			if (hit->GetComponent()->ComponentHasTag("Wall") && IsTakingItem == false)
 			{
 
 
-				ChangeWalkSideState(hit.GetComponent());
+				ChangeWalkSideState(hit->GetComponent());
 			}
 		}
 	}
@@ -226,7 +233,7 @@ void ACPP_Pawn::RayInteractItem()
 
 	if (GetWorld())
 	{
-		bool actorHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, FCollisionQueryParams(), FCollisionResponseParams());
+		bool actorHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, RayCastIgnore, FCollisionResponseParams());
 
 		if (actorHit && hit.GetActor())
 		{
@@ -255,7 +262,7 @@ bool ACPP_Pawn::IsGrounded()
 
 	if (GetWorld())
 	{
-		bool actorHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, FCollisionQueryParams(), FCollisionResponseParams());
+		bool actorHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, RayCastIgnore, FCollisionResponseParams());
 
 		if (actorHit)
 		{
@@ -376,12 +383,30 @@ void ACPP_Pawn::ChangeWalkSideState(UPrimitiveComponent* hit)
 
 	if(WallChanged)
 	{
+		
+		FVector Up = -GravtityDir;
+		FVector Forward = RootRotation->GetForwardVector();
+		FVector Right = RootRotation->GetRightVector();
+
+		float Dot = FVector::DotProduct(Right, Up);
+
 		StartRotation = RootRotation->GetComponentQuat();
-		TargetRotation = FRotationMatrix::MakeFromZY(-GravtityDir, RootRotation->GetForwardVector()).ToQuat();
+
+		if (Dot > 0)
+		{
+			// marche quand tu regardes à droite
+			TargetRotation = FRotationMatrix::MakeFromZY(Up, Forward).ToQuat();
+		}
+		else
+		{
+			// marche quand tu regardes à gauche
+			FVector NewForward = Forward.RotateAngleAxis(90.f, Up);
+			TargetRotation = FRotationMatrix::MakeFromZX(Up, NewForward).ToQuat();
+		}
 
 		bIsRotating = true;
-
 		UGameplayStatics::PlaySound2D(this, WallChangedSound);
+		
 	}
 
 

@@ -143,6 +143,7 @@ public:
 
 	AActor* TakingItem;
 
+
 	EGravityType MemTakingObjectGravityType;
 
 	void ChangeWall();
@@ -199,6 +200,8 @@ private:
 	FVector StartPos;
 	FVector Direction = FVector(0, 0, 0);
 	FVector GravtityDir = FVector(0, 0, -1);
+
+	FCollisionQueryParams RayCastIgnore;
 	bool gravityenabled = true;
 
 	// Rotation interpolation
